@@ -5,6 +5,12 @@ description = "collection of useful function and classes"
 authors = ["seekingmeanings <git-j@mail.o-family.de>"]
 readme = "README.md"
 
+packages = [
+    {include = "racing"},
+    {include = "config"},
+#    {include = "sigleton"},
+]
+
 [tool.poetry.dependencies]
 python = "^3.12"
 tomlkit = "^0.13.2"
@@ -18,6 +24,7 @@ pytest = "^8.3.4"
 hypothesis = "^6.122.3"
 
 [build-system]
+
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 

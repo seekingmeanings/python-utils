@@ -1,10 +1,12 @@
-from racing.race_condition import LockedTracking
-from typing import Any, List, Dict, Union
-import os
-import tomlkit
-import logging
-import functools
 import copy
+import functools
+import logging
+import os
+from typing import Any, Callable, Dict, List, Self, Union
+
+import tomlkit
+
+from racing.parent_lock_class import LockedTracking
 
 
 class EOI:
@@ -18,12 +20,12 @@ class Config(LockedTracking):
     a class that can handle config files and create subparts that are still linked to the parent
 
     """
+
     type KeyList = List[str]
 
-    def __init__(self, config_file: str = None,
-                 config_data=None,
-                 parent=None,
-                 parent_keys=None) -> None:
+    def __init__(
+        self, config_file: str = None, config_data=None, parent=None, parent_keys=None
+    ) -> None:
         # TODO get __file__ for init to get the global filepath here instead of the other class
         super().__init__()
 
@@ -57,42 +59,9 @@ class Config(LockedTracking):
             pass
 
     @staticmethod
-    def _recurse_for_childs(func):
+    def _recurse_for_childs(func) -> Callable:
         @functools.wraps(func)
         def wrapper(self, *args, **kwargs):
-            """
-            inputs: args = [list,] | [list, value]
-            others: pk = parent_keys
-            if input []:
-                output: ([par1, par2, par_n],)
-
-                if pk = []
-                    output: []
-
-            elif input [list,]
-                output: ([par0, par1, par2, par_n, key0, key1],)
-
-                if pk = []:
-                    output: ([key0, key1],)
-
-            elif input [list, value]:
-                output: ([par0, par1, par2, par_n, key0, key1], value,)
-
-                if pk = []:
-                    output: ([key0, key1], value,)
-            """
-
-            def _call_with_potential_args(f, s, a, k):
-                try:
-                    logging.error(f"---- cl ---- {f}, {s}, {a}, {k}")
-                    logging.error(f"||| nne ||| {[*[s.parent_keys, *a[:-1:]]]}")
-                    logging.error(f"            {a[-1] if len(a) > 1 else EOI}")
-                    logging.error(f"&&&& {(a[:-1] if len(a) > 1 else a)}")
-                except (KeyError, TypeError):
-                    pass
-
-                return f(s, *a, **k)
-
             def _get_modulated_args(parent_keys, args) -> List:
                 # TODO: check
                 if not args:
@@ -124,6 +93,7 @@ class Config(LockedTracking):
                     **kwargs,
                 )
             return func(self, *args, **kwargs)
+
         return wrapper
 
     def _load_config(self) -> Dict:
@@ -147,7 +117,7 @@ class Config(LockedTracking):
         reload the config file itself
         :return:
         """
-        with open(self._edited_fp, 'w') as f:
+        with open(self._edited_fp, "w") as f:
             tomlkit.dump(self._config, f)
 
     @LockedTracking.locked_access
@@ -163,7 +133,9 @@ class Config(LockedTracking):
         elif isinstance(keys, str):
             raise RuntimeWarning("put keys in list")
             # TODO: get set compatibility
-            keys = [keys, ]
+            keys = [
+                keys,
+            ]
 
         d = self._config
         for key in keys:
@@ -193,13 +165,13 @@ class Config(LockedTracking):
         d[keys[-1]] = value
 
         # safe n shit
-        with open(self._edited_fp, 'w') as f:
+        with open(self._edited_fp, "w") as f:
             self.lg.error(f"dumping shit to {self._edited_fp}")
             tomlkit.dump(self._config, f)
 
     @LockedTracking.locked_access
     @_recurse_for_childs
-    def delete(self, keys: KeyList):
+    def delete(self, keys: KeyList) -> None:
         tree = keys[:-1:]
         upper_stack_of_del = self.get(tree)
         upper_stack_of_del.pop(keys[-1])
@@ -207,7 +179,7 @@ class Config(LockedTracking):
         self.set(tree, upper_stack_of_del)
 
     @LockedTracking.locked_access
-    def create_child_config(self, keys: KeyList):
+    def create_child_config(self, keys: KeyList) -> Self:
         self.lg.debug(f"creating child from {keys}, subset is: {self.get(keys)}")
         try:
             subset = self.get(keys)
@@ -227,5 +199,5 @@ class Config(LockedTracking):
                 # TODO: only need parent info, editing just on level 0
                 config_data=subset,
                 parent=self,
-                parent_keys=keys
+                parent_keys=keys,
             )

@@ -17,6 +17,8 @@ tomlkit = "^0.13.2"
 
 
 [tool.poetry.group.dev.dependencies]
+black = "^24.10.0"
+isort = "^5.13.2"
 
 
 [tool.poetry.group.test.dependencies]
@@ -32,7 +34,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "--cov=* --cov-report=term-missing"
+# addopts = "--cov=* --cov-report=term-missing"
 
 testpaths = [
     "tests",

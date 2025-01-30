@@ -15,7 +15,7 @@ type WaitList = List[Tuple[WaitTuple, SetTo]]
 type ResultList = List[Dict[int, Dict[int, SetTo]]]
 
 
-class TestClass(LockedTracking):
+class LockedTestClass(LockedTracking):
     def __init__(self) -> None:
         super().__init__()
 
@@ -50,7 +50,7 @@ class TestClass(LockedTracking):
 
 @pytest.fixture
 def instance_of_test_class():
-    return TestClass()
+    return LockedTestClass()
 
 
 def generate_random_waitlist():

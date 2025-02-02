@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "python-utils"
-version = "0.1.0"
+version = "0.2.0"
 description = "collection of useful function and classes"
 authors = ["seekingmeanings <git-j@mail.o-family.de>"]
 readme = "README.md"
@@ -8,7 +8,7 @@ readme = "README.md"
 packages = [
     {include = "racing"},
     {include = "config"},
-    {include = "singleton"},
+#    {include = "singleton"},
 ]
 
 [tool.poetry.dependencies]

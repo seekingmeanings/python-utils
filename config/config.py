@@ -15,6 +15,24 @@ class EOI:
     """
 
 
+class KeychainAccessError(Exception):
+    """Custom error for when there's an issue accessing a keychain value."""
+
+    def __init__(self, keys, message="Unable to access value with the provided keychain"):
+        self.keys = keys
+        self.message = message
+        super().__init__(self.message)
+
+
+class KeychainEndError(KeychainAccessError):
+    """Custom error for when there's an issue accessing a keychain value."""
+
+    def __init__(self, keys, message="End of keychain reached"):
+        self.keys = keys
+        self.message = message
+        super().__init__(self.keys, self.message)
+
+
 class Config(LockedTracking):
     """
     a class that can handle config files and create subparts that are still linked to the parent
@@ -24,13 +42,16 @@ class Config(LockedTracking):
     type KeyList = List[str]
 
     def __init__(
-        self, config_file: str = None, config_data=None, parent=None, parent_keys=None
+            self, config_file: str = None, config_data=None, parent=None, parent_keys=None, repr=False
     ) -> None:
         # TODO get __file__ for init to get the global filepath here instead of the other class
-        super().__init__()
+        # WARNING: this is only temporary, need fixes
+        super().__init__(ignore_inter_thread=True)
 
         # TODO: sub config has extra logger
         self.lg = logging.getLogger(__name__)
+
+        self._repr = repr
 
         if config_file:
             self.lg.debug(f"using config file: {config_file}")
@@ -96,6 +117,30 @@ class Config(LockedTracking):
 
         return wrapper
 
+    def __getitem__(self, key: Any) -> Any:
+        """
+        warning: returned children have _repr set to True, can disable tho
+        :param key:
+        :return:
+        """
+        if not isinstance(key, list):
+            key = [key]
+        # we have to check what to return
+        child = self.create_child_config(key)
+        self.lg.debug(f"returning child: {child}")
+        # add repr for future childs
+        child._repr = True
+        return child
+
+    def __repr__(self):
+        """
+        only return when its active (with getitem)
+        :return:
+        """
+        if self._repr:
+            return repr(self.get())
+        return super().__repr__()
+
     def _load_config(self) -> Dict:
         """
         load the config file
@@ -139,10 +184,12 @@ class Config(LockedTracking):
 
         d = self._config
         for key in keys:
+            if not isinstance(d, dict):
+                raise KeychainEndError(keys=keys)
             d = d.get(key, None)
             if d is None:
                 # key doesnt exist (on this level)
-                raise KeyError
+                raise KeyError(f"key chain: {keys} not found")
         return d
 
     @LockedTracking.locked_access
@@ -189,7 +236,8 @@ class Config(LockedTracking):
                 self.set(subset, keys)
         except AttributeError as e:
             # TODO: implement
-            raise NotImplementedError(f"the keychain {keys} leads to a value") from e
+            raise KeychainEndError(keys=keys)
+            # raise NotImplementedError(f"the keychain {keys} leads to a value") from e
 
         except KeyError as e:
             raise KeyError(f"keychain {keys} doesnt exist in {self}") from e

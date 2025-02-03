@@ -1,13 +1,14 @@
 [tool.poetry]
 name = "python-utils-locked"
-version = "0.2.5"
+version = "0.3.0"
 description = "collection of useful function and classes"
 authors = ["seekingmeanings <git-j@mail.o-family.de>"]
 readme = "README.md"
 
 packages = [
-  { include = "racing", to = "utils_locked" },
-  { include = "config", to = "utils_locked" },
+  { include = "utils_locked" }
+#  { include = "racing",  to = "utils_locked" },
+#  { include = "config", to = "utils_locked" },
   # {include = "singleton"},
 ]
 

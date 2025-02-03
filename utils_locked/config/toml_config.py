@@ -15,16 +15,16 @@ class EOI:
     """
 
 
-def prevent_orphan_lookup(private_whitlist: List):
+def prevent_orphan_lookup(private_whitelist: List):
     """
     a wrapper that prevents an orphan and empty config from being accessed
-    :param wrapper:
+    :param private_whitelist:
     :return:
     """
 
     def class_decorator(cls):
         for attr_name in dir(cls):
-            if callable(getattr(cls, attr_name)) and (not attr_name.startswith("__") or attr_name in private_whitlist):
+            if callable(getattr(cls, attr_name)) and (not attr_name.startswith("__") or attr_name in private_whitelist):
                 setattr(cls, attr_name, _raise_error_on_empty_config(getattr(cls, attr_name)))
         return cls
 
@@ -67,7 +67,7 @@ class KeychainEndError(KeychainAccessError):
         super().__init__(self.keys, self.message)
 
 
-@prevent_orphan_lookup(["__getitem__",])
+@prevent_orphan_lookup(["__getitem__", ])
 class Config(LockedTracking):
     # TODO: generalise conf types
     """
@@ -86,13 +86,14 @@ class Config(LockedTracking):
 
         # TODO: sub config has extra logger
 
-        self.lg = logging.getLogger(__name__)
+        self.lg = logging.getLogger(f"{__name__}")
         self._empty = False
 
         self._repr = active_repr
 
         if config_file:
-            self.lg.debug(f"using config file: {config_file}")
+            # update logger for easier debugging
+            self.lg = logging.getLogger(f"{__name__}: {config_file}")
 
             self.edited_affix = ".edited"
             self._config_file = config_file
@@ -101,26 +102,25 @@ class Config(LockedTracking):
             # load the config file
             self._config = self._load_config()
 
-        elif config_data:
+        elif not parent and not config_data:
+            self.lg.warning("no config file or data provided and seems to be orphan")
+            self._empty = True
+
+        else:
+
             self.lg.debug(f"using config data: {config_data}")
 
             self._config = config_data
             self.config_file = None
 
-        elif not parent:
-            self.lg.warning("no config file or data provided and seems to be orphan")
-            self._empty = True
-
-        else:
-            # HELP: what to do here? do i need anything here?
-            raise ValueError("either provide a config file or data")
-
         self.parent = parent
         self.parent_keys = parent_keys or []
 
+
+
     @staticmethod
     def _ensure_tree_with_val_poss(func):
-        # TODO: bad practice, keep one type
+        # TODO: make str possible (at least for get)
         @functools.wraps(func)
         def wrapper(self, *args, **kwargs):
             pass

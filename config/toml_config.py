@@ -34,6 +34,7 @@ class KeychainEndError(KeychainAccessError):
 
 
 class Config(LockedTracking):
+    # TODO: generalise conf types
     """
     a class that can handle config files and create subparts that are still linked to the parent
 

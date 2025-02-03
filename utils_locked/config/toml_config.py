@@ -6,13 +6,47 @@ from typing import Any, Callable, Dict, List, Self, Union
 
 import tomlkit
 
-from racing.parent_lock_class import LockedTracking
+from utils_locked.racing.parent_lock_class import LockedTracking
 
 
 class EOI:
     """
     End of Iter
     """
+
+
+def prevent_orphan_lookup(private_whitlist: List):
+    """
+    a wrapper that prevents an orphan and empty config from being accessed
+    :param wrapper:
+    :return:
+    """
+
+    def class_decorator(cls):
+        for attr_name in dir(cls):
+            if callable(getattr(cls, attr_name)) and (not attr_name.startswith("__") or attr_name in private_whitlist):
+                setattr(cls, attr_name, _raise_error_on_empty_config(getattr(cls, attr_name)))
+        return cls
+
+    return class_decorator
+
+
+def _raise_error_on_empty_config(func):
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        if self._empty:
+            raise NoConfigError()
+        return func(self, *args, **kwargs)
+
+    return wrapper
+
+
+class NoConfigError(Exception):
+    """Custom error if there was no config file loaded for whatever reason"""
+
+    def __init__(self, message="No config file loaded"):
+        self.message = message
+        super().__init__(self.message)
 
 
 class KeychainAccessError(Exception):
@@ -33,6 +67,7 @@ class KeychainEndError(KeychainAccessError):
         super().__init__(self.keys, self.message)
 
 
+@prevent_orphan_lookup(["__getitem__",])
 class Config(LockedTracking):
     # TODO: generalise conf types
     """
@@ -43,16 +78,18 @@ class Config(LockedTracking):
     type KeyList = List[str]
 
     def __init__(
-            self, config_file: str = None, config_data=None, parent=None, parent_keys=None, repr=False
+            self, config_file: str = None, config_data=None, parent=None, parent_keys=None, active_repr=False,
     ) -> None:
         # TODO get __file__ for init to get the global filepath here instead of the other class
         # WARNING: this is only temporary, need fixes
         super().__init__(ignore_inter_thread=True)
 
         # TODO: sub config has extra logger
-        self.lg = logging.getLogger(__name__)
 
-        self._repr = repr
+        self.lg = logging.getLogger(__name__)
+        self._empty = False
+
+        self._repr = active_repr
 
         if config_file:
             self.lg.debug(f"using config file: {config_file}")
@@ -64,11 +101,19 @@ class Config(LockedTracking):
             # load the config file
             self._config = self._load_config()
 
-        else:
+        elif config_data:
             self.lg.debug(f"using config data: {config_data}")
 
             self._config = config_data
             self.config_file = None
+
+        elif not parent:
+            self.lg.warning("no config file or data provided and seems to be orphan")
+            self._empty = True
+
+        else:
+            # HELP: what to do here? do i need anything here?
+            raise ValueError("either provide a config file or data")
 
         self.parent = parent
         self.parent_keys = parent_keys or []

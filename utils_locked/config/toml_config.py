@@ -273,6 +273,7 @@ class Config(LockedTracking):
 
     @LockedTracking.locked_access
     def create_child_config(self, keys: KeyList) -> Self:
+        # TODO: implement list childs with index and not just keys (the indexes have to be remarked in the keys tho
         self.lg.debug(f"creating child from {keys}, subset is: {self.get(keys)}")
         try:
             subset = self.get(keys)
@@ -281,9 +282,7 @@ class Config(LockedTracking):
                 subset = {}
                 self.set(subset, keys)
         except AttributeError as e:
-            # TODO: implement
             raise KeychainEndError(keys=keys)
-            # raise NotImplementedError(f"the keychain {keys} leads to a value") from e
 
         except KeyError as e:
             raise KeyError(f"keychain {keys} doesnt exist in {self}") from e

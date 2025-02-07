@@ -196,11 +196,11 @@ class Config(LockedTracking):
         """
         if os.path.exists(self._edited_fp):
             with open(self._edited_fp, "r") as f:
-                self.lg.info(f"loading config as toml from edited: {self._edited_fp}")
+                self.lg.debug(f"loading config as toml from edited: {self._edited_fp}")
                 return tomlkit.load(f)
 
         with open(self._config_file, "r") as f:
-            self.lg.info(f"loading config as toml from original: {self._config_file}")
+            self.lg.debug(f"loading config as toml from original: {self._config_file}")
             return tomlkit.load(f)
 
     def apply_changes(self) -> None:

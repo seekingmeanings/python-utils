@@ -126,7 +126,7 @@ class Config(LockedTracking):
             pass
 
     @staticmethod
-    def _recurse_for_childs(func) -> Callable:
+    def _recurse_for_children(func) -> Callable:
         @functools.wraps(func)
         def wrapper(self, *args, **kwargs):
             def _get_modulated_args(parent_keys, args) -> List:
@@ -135,7 +135,7 @@ class Config(LockedTracking):
                     if not parent_keys:
                         return []
                     else:
-                        return (parent_keys,)
+                        return [parent_keys,]
 
                 # If args contains only a list
                 elif len(args) == 1 and isinstance(args[0], list):
@@ -143,16 +143,16 @@ class Config(LockedTracking):
                     if not parent_keys:
                         return args[0]
                     else:
-                        return (combined_output,)
+                        return [combined_output,]
 
                 # If args contains a list and a value
                 elif len(args) == 2 and isinstance(args[0], list):
                     combined_output = parent_keys + args[0]
                     value = args[1]
                     if not parent_keys:
-                        return (args[0], value)
+                        return [args[0], value]
                     else:
-                        return (combined_output, value)
+                        return [combined_output, value]
 
             if self.parent:
                 return getattr(self.parent, func.__name__)(
@@ -203,7 +203,7 @@ class Config(LockedTracking):
             self.lg.debug(f"loading config as toml from original: {self._config_file}")
             return tomlkit.load(f)
 
-    def apply_changes(self) -> None:
+    def _apply_changes(self) -> None:
         """
         reload the config file itself
         :return:
@@ -212,7 +212,7 @@ class Config(LockedTracking):
             tomlkit.dump(self._config, f)
 
     @LockedTracking.locked_access
-    @_recurse_for_childs
+    @_recurse_for_children
     def get(self, keys: KeyList = None) -> Union[Dict, Any]:
         """
         get the config stack
@@ -239,7 +239,7 @@ class Config(LockedTracking):
         return d
 
     @LockedTracking.locked_access
-    @_recurse_for_childs
+    @_recurse_for_children
     def set(self, keys: KeyList, value: Any) -> None:
         """
         set a value in the config stack
@@ -263,7 +263,7 @@ class Config(LockedTracking):
             tomlkit.dump(self._config, f)
 
     @LockedTracking.locked_access
-    @_recurse_for_childs
+    @_recurse_for_children
     def delete(self, keys: KeyList) -> None:
         tree = keys[:-1:]
         upper_stack_of_del = self.get(tree)
@@ -272,7 +272,7 @@ class Config(LockedTracking):
         self.set(tree, upper_stack_of_del)
 
     @LockedTracking.locked_access
-    def create_child_config(self, keys: KeyList) -> Self:
+    def create_child_config(self, keys: KeyList) -> "Config":
         # TODO: implement list childs with index and not just keys (the indexes have to be remarked in the keys tho
         self.lg.debug(f"creating child from {keys}, subset is: {self.get(keys)}")
         try:

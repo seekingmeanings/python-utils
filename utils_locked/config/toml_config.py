@@ -75,8 +75,6 @@ class Config(LockedTracking):
 
     """
 
-    type KeyList = List[str]
-
     def __init__(
             self, config_file: str = None, config_data=None, parent=None, parent_keys=None, active_repr=False,
     ) -> None:
@@ -213,7 +211,7 @@ class Config(LockedTracking):
 
     @LockedTracking.locked_access
     @_recurse_for_children
-    def get(self, keys: KeyList = None) -> Union[Dict, Any]:
+    def get(self, keys: List[str] = None) -> Any:
         """
         get the config stack
         :return: get the stack
@@ -240,7 +238,7 @@ class Config(LockedTracking):
 
     @LockedTracking.locked_access
     @_recurse_for_children
-    def set(self, keys: KeyList, value: Any) -> None:
+    def set(self, keys: List[str], value: Any) -> None:
         """
         set a value in the config stack
 
@@ -264,7 +262,7 @@ class Config(LockedTracking):
 
     @LockedTracking.locked_access
     @_recurse_for_children
-    def delete(self, keys: KeyList) -> None:
+    def delete(self, keys: List[str]) -> None:
         tree = keys[:-1:]
         upper_stack_of_del = self.get(tree)
         upper_stack_of_del.pop(keys[-1])
@@ -272,7 +270,7 @@ class Config(LockedTracking):
         self.set(tree, upper_stack_of_del)
 
     @LockedTracking.locked_access
-    def create_child_config(self, keys: KeyList) -> "Config":
+    def create_child_config(self, keys: List[str]) -> "Config":
         # TODO: implement list childs with index and not just keys (the indexes have to be remarked in the keys tho
         self.lg.debug(f"creating child from {keys}, subset is: {self.get(keys)}")
         try:

@@ -6,13 +6,47 @@ from typing import Any, Callable, Dict, List, Self, Union
 
 import tomlkit
 
-from racing.parent_lock_class import LockedTracking
+from utils_locked.racing.parent_lock_class import LockedTracking
 
 
 class EOI:
     """
     End of Iter
     """
+
+
+def prevent_orphan_lookup(private_whitelist: List):
+    """
+    a wrapper that prevents an orphan and empty config from being accessed
+    :param private_whitelist:
+    :return:
+    """
+
+    def class_decorator(cls):
+        for attr_name in dir(cls):
+            if callable(getattr(cls, attr_name)) and (not attr_name.startswith("__") or attr_name in private_whitelist):
+                setattr(cls, attr_name, _raise_error_on_empty_config(getattr(cls, attr_name)))
+        return cls
+
+    return class_decorator
+
+
+def _raise_error_on_empty_config(func):
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        if self._empty:
+            raise NoConfigError()
+        return func(self, *args, **kwargs)
+
+    return wrapper
+
+
+class NoConfigError(Exception):
+    """Custom error if there was no config file loaded for whatever reason"""
+
+    def __init__(self, message="No config file loaded"):
+        self.message = message
+        super().__init__(self.message)
 
 
 class KeychainAccessError(Exception):
@@ -33,6 +67,7 @@ class KeychainEndError(KeychainAccessError):
         super().__init__(self.keys, self.message)
 
 
+@prevent_orphan_lookup(["__getitem__", ])
 class Config(LockedTracking):
     # TODO: generalise conf types
     """
@@ -43,19 +78,22 @@ class Config(LockedTracking):
     type KeyList = List[str]
 
     def __init__(
-            self, config_file: str = None, config_data=None, parent=None, parent_keys=None, repr=False
+            self, config_file: str = None, config_data=None, parent=None, parent_keys=None, active_repr=False,
     ) -> None:
         # TODO get __file__ for init to get the global filepath here instead of the other class
         # WARNING: this is only temporary, need fixes
         super().__init__(ignore_inter_thread=True)
 
         # TODO: sub config has extra logger
-        self.lg = logging.getLogger(__name__)
 
-        self._repr = repr
+        self.lg = logging.getLogger(f"{__name__}")
+        self._empty = False
+
+        self._repr = active_repr
 
         if config_file:
-            self.lg.debug(f"using config file: {config_file}")
+            # update logger for easier debugging
+            self.lg = logging.getLogger(f"{__name__}: {config_file}")
 
             self.edited_affix = ".edited"
             self._config_file = config_file
@@ -64,7 +102,12 @@ class Config(LockedTracking):
             # load the config file
             self._config = self._load_config()
 
+        elif not parent and not config_data:
+            self.lg.warning("no config file or data provided and seems to be orphan")
+            self._empty = True
+
         else:
+
             self.lg.debug(f"using config data: {config_data}")
 
             self._config = config_data
@@ -73,15 +116,17 @@ class Config(LockedTracking):
         self.parent = parent
         self.parent_keys = parent_keys or []
 
+
+
     @staticmethod
     def _ensure_tree_with_val_poss(func):
-        # TODO: bad practice, keep one type
+        # TODO: make str possible (at least for get)
         @functools.wraps(func)
         def wrapper(self, *args, **kwargs):
             pass
 
     @staticmethod
-    def _recurse_for_childs(func) -> Callable:
+    def _recurse_for_children(func) -> Callable:
         @functools.wraps(func)
         def wrapper(self, *args, **kwargs):
             def _get_modulated_args(parent_keys, args) -> List:
@@ -90,7 +135,7 @@ class Config(LockedTracking):
                     if not parent_keys:
                         return []
                     else:
-                        return (parent_keys,)
+                        return [parent_keys,]
 
                 # If args contains only a list
                 elif len(args) == 1 and isinstance(args[0], list):
@@ -98,16 +143,16 @@ class Config(LockedTracking):
                     if not parent_keys:
                         return args[0]
                     else:
-                        return (combined_output,)
+                        return [combined_output,]
 
                 # If args contains a list and a value
                 elif len(args) == 2 and isinstance(args[0], list):
                     combined_output = parent_keys + args[0]
                     value = args[1]
                     if not parent_keys:
-                        return (args[0], value)
+                        return [args[0], value]
                     else:
-                        return (combined_output, value)
+                        return [combined_output, value]
 
             if self.parent:
                 return getattr(self.parent, func.__name__)(
@@ -151,14 +196,14 @@ class Config(LockedTracking):
         """
         if os.path.exists(self._edited_fp):
             with open(self._edited_fp, "r") as f:
-                self.lg.info(f"loading config as toml from edited: {self._edited_fp}")
+                self.lg.debug(f"loading config as toml from edited: {self._edited_fp}")
                 return tomlkit.load(f)
 
         with open(self._config_file, "r") as f:
-            self.lg.info(f"loading config as toml from original: {self._config_file}")
+            self.lg.debug(f"loading config as toml from original: {self._config_file}")
             return tomlkit.load(f)
 
-    def apply_changes(self) -> None:
+    def _apply_changes(self) -> None:
         """
         reload the config file itself
         :return:
@@ -167,7 +212,7 @@ class Config(LockedTracking):
             tomlkit.dump(self._config, f)
 
     @LockedTracking.locked_access
-    @_recurse_for_childs
+    @_recurse_for_children
     def get(self, keys: KeyList = None) -> Union[Dict, Any]:
         """
         get the config stack
@@ -194,7 +239,7 @@ class Config(LockedTracking):
         return d
 
     @LockedTracking.locked_access
-    @_recurse_for_childs
+    @_recurse_for_children
     def set(self, keys: KeyList, value: Any) -> None:
         """
         set a value in the config stack
@@ -218,7 +263,7 @@ class Config(LockedTracking):
             tomlkit.dump(self._config, f)
 
     @LockedTracking.locked_access
-    @_recurse_for_childs
+    @_recurse_for_children
     def delete(self, keys: KeyList) -> None:
         tree = keys[:-1:]
         upper_stack_of_del = self.get(tree)
@@ -227,7 +272,8 @@ class Config(LockedTracking):
         self.set(tree, upper_stack_of_del)
 
     @LockedTracking.locked_access
-    def create_child_config(self, keys: KeyList) -> Self:
+    def create_child_config(self, keys: KeyList) -> "Config":
+        # TODO: implement list childs with index and not just keys (the indexes have to be remarked in the keys tho
         self.lg.debug(f"creating child from {keys}, subset is: {self.get(keys)}")
         try:
             subset = self.get(keys)
@@ -236,9 +282,7 @@ class Config(LockedTracking):
                 subset = {}
                 self.set(subset, keys)
         except AttributeError as e:
-            # TODO: implement
             raise KeychainEndError(keys=keys)
-            # raise NotImplementedError(f"the keychain {keys} leads to a value") from e
 
         except KeyError as e:
             raise KeyError(f"keychain {keys} doesnt exist in {self}") from e

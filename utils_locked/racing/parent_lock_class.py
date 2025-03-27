@@ -1,6 +1,6 @@
 import logging
 from functools import wraps
-from threading import Lock, RLock
+from threading import Lock, RLock, Condition
 from time import gmtime
 
 
@@ -14,7 +14,7 @@ class LockedTracking:
         self.lg = logging.getLogger(__name__)
 
         self._last_access = None
-        self._lock = RLock() if ignore_inter_thread else Lock()
+        self._lock = RLock() if ignore_inter_thread else Condition()
 
     # TODO: keep property decorators alive
     @staticmethod

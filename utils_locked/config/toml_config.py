@@ -1,11 +1,9 @@
-import copy
 import functools
 import logging
 import os
 from typing import Any, Callable, Dict, List, Self, Union, Optional
 
 import tomlkit
-from attr.validators import is_callable
 
 from utils_locked.racing.parent_lock_class import LockedTracking
 

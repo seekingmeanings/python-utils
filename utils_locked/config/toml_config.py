@@ -2,11 +2,14 @@ import copy
 import functools
 import logging
 import os
-from typing import Any, Callable, Dict, List, Self, Union
+from typing import Any, Callable, Dict, List, Self, Union, Optional
 
 import tomlkit
+from attr.validators import is_callable
 
 from utils_locked.racing.parent_lock_class import LockedTracking
+
+from .schema import Schema
 
 
 class EOI:
@@ -77,6 +80,7 @@ class Config(LockedTracking):
 
     def __init__(
             self, config_file: str = None, config_data=None, parent=None, parent_keys=None, active_repr=False,
+            call_after_set: Optional[Callable] = None, parent_config_file: Optional[str] = None,
     ) -> None:
         # TODO get __file__ for init to get the global filepath here instead of the other class
         # WARNING: this is only temporary, need fixes
@@ -85,9 +89,12 @@ class Config(LockedTracking):
         # TODO: sub config has extra logger
 
         self.lg = logging.getLogger(f"{__name__}")
+        self.lg.setLevel(level=logging.INFO)
         self._empty = False
 
         self._repr = active_repr
+
+        self.f_call_after_set = call_after_set
 
         if config_file:
             # update logger for easier debugging
@@ -107,6 +114,8 @@ class Config(LockedTracking):
         else:
 
             self.lg.debug(f"using config data: {config_data}")
+
+            self.parent_config_file = parent_config_file
 
             self._config = config_data
             self.config_file = None
@@ -220,7 +229,7 @@ class Config(LockedTracking):
         if keys is None:
             keys = []
         elif isinstance(keys, str):
-            raise RuntimeWarning("put keys in list")
+            raise TypeError("put keys in list")
             # TODO: get set compatibility
             keys = [
                 keys,
@@ -233,12 +242,21 @@ class Config(LockedTracking):
             d = d.get(key, None)
             if d is None:
                 # key doesnt exist (on this level)
-                raise KeyError(f"key chain: {keys} not found")
+
+
+                raise KeyError(
+                    f"key chain: {keys} not found"
+                    + f"in {self._config_file if self._config_file else self.parent_config_file}"
+                    + f"with parent keys {self.parent_keys}")
         return d
+
+    def set(self, keys: List[str], value: Any) -> None:
+        self._set(keys, value)
+        self.call_after_set()
 
     @LockedTracking.locked_access
     @_recurse_for_children
-    def set(self, keys: List[str], value: Any) -> None:
+    def _set(self, keys: List[str], value: Any) -> None:
         """
         set a value in the config stack
 
@@ -255,6 +273,7 @@ class Config(LockedTracking):
             d = d[key]
         d[keys[-1]] = value
 
+        # FIXME: this is in the wrong place
         # safe n shit
         with open(self._edited_fp, "w") as f:
             self.lg.error(f"dumping shit to {self._edited_fp}")
@@ -276,7 +295,7 @@ class Config(LockedTracking):
         try:
             subset = self.get(keys)
             if subset is None:
-                raise RuntimeWarning("check implementation")
+                raise TypeError("check implementation, got None type subset")
                 subset = {}
                 self.set(subset, keys)
         except AttributeError as e:
@@ -291,4 +310,10 @@ class Config(LockedTracking):
                 config_data=subset,
                 parent=self,
                 parent_keys=keys,
+                parent_config_file=self._config_file if hasattr(self, "_config_file") and self._config_file is not None \
+                else self.parent_config_file
             )
+
+    def call_after_set(self):
+        if self.f_call_after_set is not None:
+            self.f_call_after_set()

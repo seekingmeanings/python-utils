@@ -7,7 +7,7 @@ import tomlkit
 
 from utils_locked.racing.parent_lock_class import LockedTracking
 
-from .schema import Schema
+#from .schema import Schema
 
 
 class EOI:
@@ -244,7 +244,7 @@ class Config(LockedTracking):
 
                 raise KeyError(
                     f"key chain: {keys} not found"
-                    + f"in {self._config_file if self._config_file else self.parent_config_file}"
+                    + f"in \"{self._config_file if self._config_file else self.parent_config_file}\" "
                     + f"with parent keys {self.parent_keys}")
         return d
 

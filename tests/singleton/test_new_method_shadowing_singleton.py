@@ -1,5 +1,4 @@
-import pytest
-from singleton.singleton import Singleton
+from utils_locked.singleton import Singleton
 
 
 class Base:

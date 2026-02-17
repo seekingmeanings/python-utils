@@ -1,3 +1,4 @@
+import functools
 import importlib
 
 from typing import Union, List
@@ -19,6 +20,7 @@ class Singleton:
 
     @staticmethod
     def singleton_init(init_func):
+        @functools.wraps(init_func)
         def wrapper(self, *args, **kwargs):
             if not hasattr(self, '_initialized'):
                 init_func(self, *args, **kwargs)
@@ -28,10 +30,10 @@ class Singleton:
 
         return wrapper
 
-    @singleton_init
-    def __init__(self):
-        self.lg = logging.getLogger(self.__class__.__name__)
-        pass
+    # @singleton_init
+    # def __init__(self):
+    #     self.lg = logging.getLogger(self.__class__.__name__)
+    #     pass
 
 
 # TODO: make a wrapper version?

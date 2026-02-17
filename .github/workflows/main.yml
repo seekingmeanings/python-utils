@@ -27,7 +27,7 @@ jobs:
 
     - name: Install dependencies with Poetry
       run: |
-        poetry install
+        poetry install --with=test
 
     - name: Run Pytest
       run: |

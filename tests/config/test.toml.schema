@@ -1,0 +1,44 @@
+[meta]
+version = "0.1"
+
+# either schema or s
+# either element or e
+# just gotta stay the same for the file
+
+[schema]
+[[schema.e]]
+key = "t1"
+unique = false
+required = false
+type = "element"
+
+[schema.e.e]
+required = true
+type = "element"
+
+[schema.e.e.key]
+type = "str"
+regex = '^t(?P<somenumber>[0-9])subelement$'
+
+[schema.e.e.key.re.somenumber]
+type = "int"
+min = 0
+max = 3
+
+[[schema.e.e.e]]
+key = "a"
+required = true
+
+[schema.e.e.e.value]
+type = "int"
+min = 10
+max = 30
+
+
+[[schema.e.e.e]]
+key = "b"
+required = true
+
+[[schema.e.e.e.value]]
+type = "str"
+value = "a44"

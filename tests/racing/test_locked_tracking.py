@@ -1,13 +1,11 @@
 import concurrent.futures
 import random
-import threading
 import time
-from pprint import pprint as pp
 from typing import Dict, List, Tuple, Union
 
 import pytest
 
-from racing.parent_lock_class import LockedTracking
+from utils_locked.racing import LockedTracking
 
 type WaitTuple = Tuple[Union[int, float], Union[int, float]]
 type SetTo = int

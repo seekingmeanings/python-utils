@@ -87,7 +87,8 @@ class Config(LockedTracking):
         # TODO: sub config has extra logger
 
         self.lg = logging.getLogger(f"{__name__}")
-        self.lg.setLevel(level=logging.INFO)
+        lv = logging.WARNING
+        self.lg.setLevel(level=lv)
         self._empty = False
 
         self._repr = active_repr
@@ -97,7 +98,7 @@ class Config(LockedTracking):
         if config_file:
             # update logger for easier debugging
             self.lg = logging.getLogger(f"{__name__}: {config_file}")
-            self.lg.setLevel(level=logging.INFO)
+            self.lg.setLevel(level=lv)
 
             self.edited_affix = ".edited"
             self._config_file = config_file

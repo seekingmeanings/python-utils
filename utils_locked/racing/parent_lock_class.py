@@ -5,13 +5,14 @@ from time import gmtime
 
 
 class LockedTracking:
-    def __init__(self, ignore_inter_thread: bool = False) -> None:
+    def __init__(self, ignore_inter_thread: bool = False, debug_level: int = logging.INFO) -> None:
         """
 
         :param ignore_inter_thread: use RLock, not blocking for same-thread requests
         """
 
         self.lg = logging.getLogger(__name__)
+        self.lg.setLevel(debug_level)
 
         self._last_access = None
         self._lock = RLock() if ignore_inter_thread else Condition()

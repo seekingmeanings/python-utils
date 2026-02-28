@@ -5,14 +5,14 @@ from time import gmtime
 
 
 class LockedTracking:
-    def __init__(self, ignore_inter_thread: bool = False, debug_level: int = logging.INFO) -> None:
+    def __init__(self, ignore_inter_thread: bool = False, log_level: int = logging.WARNING) -> None:
         """
 
         :param ignore_inter_thread: use RLock, not blocking for same-thread requests
         """
-
-        self.lg = logging.getLogger(__name__)
-        self.lg.setLevel(debug_level)
+        # WARNING: this just to make sure it wont be overridden
+        self._lg = logging.getLogger(__name__)
+        self._lg.setLevel(log_level)
 
         self._last_access = None
         self._lock = RLock() if ignore_inter_thread else Condition()
@@ -24,9 +24,9 @@ class LockedTracking:
             @wraps(func)
             def wrapper(*args, **kwargs):
                 wrapped_self = args[0]
-                wrapped_self.lg.debug(f"acquiring lock for: {func.__name__}")
+                wrapped_self._lg.debug(f"acquiring lock for: {func.__name__}")
                 with wrapped_self._lock:
-                    wrapped_self.lg.debug(f"acquired lock for: {func.__name__}")
+                    wrapped_self._lg.debug(f"acquired lock for: {func.__name__}")
                     if track:
                         wrapped_self.last_access = gmtime()
                     return func(*args, **kwargs)

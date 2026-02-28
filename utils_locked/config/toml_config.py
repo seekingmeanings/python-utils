@@ -97,6 +97,7 @@ class Config(LockedTracking):
         if config_file:
             # update logger for easier debugging
             self.lg = logging.getLogger(f"{__name__}: {config_file}")
+            self.lg.setLevel(level=logging.INFO)
 
             self.edited_affix = ".edited"
             self._config_file = config_file
@@ -289,7 +290,7 @@ class Config(LockedTracking):
     @LockedTracking.locked_access
     def create_child_config(self, keys: List[str]) -> "Config":
         # TODO: implement list childs with index and not just keys (the indexes have to be remarked in the keys tho
-        self.lg.debug(f"creating child from {keys}, subset is: {self.get(keys)}")
+        self.lg.info(f"creating child from {keys}, subset is: {self.get(keys)}")
         try:
             subset = self.get(keys)
             if subset is None:

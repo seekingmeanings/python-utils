@@ -14,22 +14,17 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.11"
-tomlkit = "^0.13.2"
 
 
 [tool.poetry.group.dev.dependencies]
-black = "^24.10.0"
-isort = "^5.13.2"
-coverage = "^7.6.10"
-pytest-cov = "^6.0.0"
 
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.3.4"
 hypothesis = "^6.122.3"
 
-[build-system]
 
+[build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 

@@ -1,10 +1,10 @@
 import logging
 
-#from .toml_config import Config
-from ..racing.parent_lock_class import LockedTracking
+import lib.tomlkit.items
+from utils_locked.config.toml_config import Config
+from utils_locked.racing.parent_lock_class import LockedTracking
 
-class Config:
-    pass
+import sys
 
 class Schema(LockedTracking):
     """
@@ -17,13 +17,25 @@ class Schema(LockedTracking):
 
         self.lg = logging.getLogger(f"{__name__}")
 
-        self.schema = Config(schema)
+        self.schema_l = Config(schema)
 
 
-    def check(self):
-        pass
+    def check(self, toml_file) -> bool:
+        cft = Config(toml_file)
 
+        cfto = cft.get()
 
+        for obj in self.schema_l.get(["ifo"]):
+            if obj["required"]:
+                assert obj["key"] in cfto
+
+                print(type(cfto[obj["key"]]))
+                assert isinstance(cfto[obj["key"]], int)
+
+        return True
+
+    def dump_schema(self) -> str:
+        return self.schema_l.dump_file()
 
 
 def check_schema():
@@ -33,3 +45,11 @@ def check_schema():
     :return:
     """
     pass
+
+
+if __name__ == "__main__":
+    print("--- test")
+
+    s = Schema(sys.argv[1])
+
+    s.check(sys.argv[2])

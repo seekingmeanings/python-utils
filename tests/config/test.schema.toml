@@ -1,0 +1,15 @@
+
+[validator]
+
+
+# in-file object
+[[ifo]]
+key = "a" # literal
+required = true
+
+[ifo.type]
+allowed = ["int"]
+
+[ifo.value.int]
+ge=30
+
